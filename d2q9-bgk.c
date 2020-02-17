@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
   /* write final values and free memory */
   printf("==done==\n");
   printf("Reynolds number:\t\t%.12E\n", calc_reynolds(params, cells, obstacles));
-  printf("Elapsed time:\t\t\t%.6lf (s)\n", toc - tic);
+  printf("\n\nElapsed time:\t\t\t%.6lf (s)\n\n\n", toc - tic);
   printf("Elapsed user CPU time:\t\t%.6lf (s)\n", usrtim);
   printf("Elapsed system CPU time:\t%.6lf (s)\n", systim);
   write_values(params, cells, obstacles, av_vels);
@@ -187,18 +187,11 @@ int main(int argc, char* argv[])
 
 int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
 {
-  accelerate_flow(params, cells, obstacles);
-  propagate(params, cells, tmp_cells);
-  rebound(params, cells, tmp_cells, obstacles);
-  collision(params, cells, tmp_cells, obstacles);
-  return EXIT_SUCCESS;
-}
 
-int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
-{
+/* ==================== ACCELERATE FLOW ====================*/
   /* compute weighting factors */
-  float w1 = params.density * params.accel / 9.f;
-  float w2 = params.density * params.accel / 36.f;
+  float a1 = params.density * params.accel / 9.f;
+  float a2 = params.density * params.accel / 36.f;
 
   /* modify the 2nd row of the grid */
   int jj = params.ny - 2;
@@ -208,26 +201,29 @@ int accelerate_flow(const t_param params, t_speed* cells, int* obstacles)
     /* if the cell is not occupied and
     ** we don't send a negative density */
     if (!obstacles[ii + jj*params.nx]
-        && (cells[ii + jj*params.nx].speeds[3] - w1) > 0.f
-        && (cells[ii + jj*params.nx].speeds[6] - w2) > 0.f
-        && (cells[ii + jj*params.nx].speeds[7] - w2) > 0.f)
+        && (cells[ii + jj*params.nx].speeds[3] - a1) > 0.f
+        && (cells[ii + jj*params.nx].speeds[6] - a2) > 0.f
+        && (cells[ii + jj*params.nx].speeds[7] - a2) > 0.f)
     {
       /* increase 'east-side' densities */
-      cells[ii + jj*params.nx].speeds[1] += w1;
-      cells[ii + jj*params.nx].speeds[5] += w2;
-      cells[ii + jj*params.nx].speeds[8] += w2;
+      cells[ii + jj*params.nx].speeds[1] += a1;
+      cells[ii + jj*params.nx].speeds[5] += a2;
+      cells[ii + jj*params.nx].speeds[8] += a2;
       /* decrease 'west-side' densities */
-      cells[ii + jj*params.nx].speeds[3] -= w1;
-      cells[ii + jj*params.nx].speeds[6] -= w2;
-      cells[ii + jj*params.nx].speeds[7] -= w2;
+      cells[ii + jj*params.nx].speeds[3] -= a1;
+      cells[ii + jj*params.nx].speeds[6] -= a2;
+      cells[ii + jj*params.nx].speeds[7] -= a2;
     }
   }
 
-  return EXIT_SUCCESS;
-}
 
-int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells)
-{
+  /* COLLISION CONSTANTS (before loop) */
+  const float c_sq = 1.f / 3.f; /* square of speed of sound */
+  const float w0 = 4.f / 9.f;  /* weighting factor */
+  const float w1 = 1.f / 9.f;  /* weighting factor */
+  const float w2 = 1.f / 36.f; /* weighting factor */
+
+/* ====================== PROPAGATE ====================== */
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
@@ -251,19 +247,10 @@ int propagate(const t_param params, t_speed* cells, t_speed* tmp_cells)
       tmp_cells[ii + jj*params.nx].speeds[6] = cells[x_e + y_s*params.nx].speeds[6]; /* north-west */
       tmp_cells[ii + jj*params.nx].speeds[7] = cells[x_e + y_n*params.nx].speeds[7]; /* south-west */
       tmp_cells[ii + jj*params.nx].speeds[8] = cells[x_w + y_n*params.nx].speeds[8]; /* south-east */
-    }
-  }
 
-  return EXIT_SUCCESS;
-}
 
-int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
-{
-  /* loop over the cells in the grid */
-  for (int jj = 0; jj < params.ny; jj++)
-  {
-    for (int ii = 0; ii < params.nx; ii++)
-    {
+/* ======================= REBOUND ======================= */
+
       /* if the cell contains an obstacle */
       if (obstacles[jj*params.nx + ii])
       {
@@ -281,15 +268,7 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
     }
   }
 
-  return EXIT_SUCCESS;
-}
-
-int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
-{
-  const float c_sq = 1.f / 3.f; /* square of speed of sound */
-  const float w0 = 4.f / 9.f;  /* weighting factor */
-  const float w1 = 1.f / 9.f;  /* weighting factor */
-  const float w2 = 1.f / 36.f; /* weighting factor */
+/* ====================== COLLISION ====================== */
 
   /* loop over the cells in the grid
   ** NB the collision step is called after
@@ -377,8 +356,8 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
           cells[ii + jj*params.nx].speeds[kk] = tmp_cells[ii + jj*params.nx].speeds[kk]
-                                                  + params.omega
-                                                  * (d_equ[kk] - tmp_cells[ii + jj*params.nx].speeds[kk]);
+                                                + params.omega
+                                                * (d_equ[kk] - tmp_cells[ii + jj*params.nx].speeds[kk]);
         }
       }
     }
