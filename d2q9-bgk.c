@@ -326,34 +326,17 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
         /* equilibrium densities */
         float d_equ[NSPEEDS];
         /* zero velocity density: weight w_0 */
-        d_equ[0] = w_0 * local_density
-                   * (1.f - op);
+        d_equ[0] = w_0*local_density*(1.f - op);
         /* axis speeds: weight w_1 */
-        d_equ[1] = w_1 * local_density * (1.f + u[1] * (3.0f
-                                         + u[1] * 4.5f)
-                                         - op);
-        d_equ[2] = w_1 * local_density * (1.f + u[2] * (3.0f
-                                         + u[2] * 4.5f)
-                                         - op);
-        d_equ[3] = w_1 * local_density * (1.f + u[3] * (3.0f
-                                         + u[3] * 4.5f)
-                                         - op);
-        d_equ[4] = w_1 * local_density * (1.f + u[4] * (3.0f
-                                         + u[4] * 4.5f)
-                                         - op);
+        d_equ[1] = w_1*local_density*(1.f + u[1] * (3.0f + u[1]*4.5f) - op);
+        d_equ[2] = w_1*local_density*(1.f + u[2] * (3.0f + u[2]*4.5f) - op);
+        d_equ[3] = w_1*local_density*(1.f + u[3] * (3.0f + u[3]*4.5f) - op);
+        d_equ[4] = w_1*local_density*(1.f + u[4] * (3.0f + u[4]*4.5f) - op);
         /* diagonal speeds: weight w_2 */
-        d_equ[5] = w_2 * local_density * (1.f + u[5] * (3.0f
-                                         + u[5] * 4.5f)
-                                         - op);
-        d_equ[6] = w_2 * local_density * (1.f + u[6] * (3.0f
-                                         + u[6] * 4.5f)
-                                         - op);
-        d_equ[7] = w_2 * local_density * (1.f + u[7] * (3.0f
-                                         + u[7] * 4.5f)
-                                         - op);
-        d_equ[8] = w_2 * local_density * (1.f + u[8] * (3.0f
-                                         + u[8] * 4.5f)
-                                         - op);
+        d_equ[5] = w_2*local_density*(1.f + u[5] * (3.0f + u[5]*4.5f) - op);
+        d_equ[6] = w_2*local_density*(1.f + u[6] * (3.0f + u[6]*4.5f) - op);
+        d_equ[7] = w_2*local_density*(1.f + u[7] * (3.0f + u[7]*4.5f) - op);
+        d_equ[8] = w_2*local_density*(1.f + u[8] * (3.0f + u[8]*4.5f) - op);
 
         /* relaxation step */
         for (int kk = 0; kk < NSPEEDS; kk++)
