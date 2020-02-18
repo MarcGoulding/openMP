@@ -59,6 +59,10 @@
 #define NSPEEDS         9
 #define FINALSTATEFILE  "final_state.dat"
 #define AVVELSFILE      "av_vels.dat"
+/* COLLISION CONSTANTS */
+const float w_0 = 4.f / 9.f;  /* weighting factor */
+const float w_1 = 1.f / 9.f;  /* weighting factor */
+const float w_2 = 1.f / 36.f; /* weighting factor */
 
 /* struct to hold the parameter values */
 typedef struct
@@ -136,6 +140,8 @@ int main(int argc, char* argv[])
   double usrtim;                /* floating point number to record elapsed user CPU time */
   double systim;                /* floating point number to record elapsed system CPU time */
 
+
+
   /* parse the command line */
   if (argc != 3)
   {
@@ -158,6 +164,7 @@ int main(int argc, char* argv[])
   {
     timestep(params, cells, tmp_cells, obstacles);
     av_vels[tt] = av_velocity(params, cells, obstacles);
+
 #ifdef DEBUG
     printf("==timestep: %d==\n", tt);
     printf("av velocity: %.12E\n", av_vels[tt]);
@@ -217,12 +224,6 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
   }
 
 
-  /* COLLISION CONSTANTS (before loop) */
-  const float c_sq = 1.f / 3.f; /* square of speed of sound */
-  const float w0 = 4.f / 9.f;  /* weighting factor */
-  const float w1 = 1.f / 9.f;  /* weighting factor */
-  const float w2 = 1.f / 36.f; /* weighting factor */
-
 /* ====================== PROPAGATE ====================== */
   /* loop over _all_ cells */
   for (int jj = 0; jj < params.ny; jj++)
@@ -252,7 +253,7 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
 /* ======================= REBOUND ======================= */
 
       /* if the cell contains an obstacle */
-      if (obstacles[jj*params.nx + ii])
+      if (obstacles[ii + jj*params.nx])
       {
         /* called after propagate, so taking values from scratch space
         ** mirroring, and writing into main grid */
@@ -308,6 +309,8 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
 
         /* velocity squared */
         float u_sq = u_x * u_x + u_y * u_y;
+        float op = u_sq * 1.5f;
+
 
         /* directional velocity components */
         float u[NSPEEDS];
@@ -322,42 +325,42 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
 
         /* equilibrium densities */
         float d_equ[NSPEEDS];
-        /* zero velocity density: weight w0 */
-        d_equ[0] = w0 * local_density
-                   * (1.f - u_sq / (2.f * c_sq));
-        /* axis speeds: weight w1 */
-        d_equ[1] = w1 * local_density * (1.f + u[1] / c_sq
-                                         + (u[1] * u[1]) / (2.f * c_sq * c_sq)
-                                         - u_sq / (2.f * c_sq));
-        d_equ[2] = w1 * local_density * (1.f + u[2] / c_sq
-                                         + (u[2] * u[2]) / (2.f * c_sq * c_sq)
-                                         - u_sq / (2.f * c_sq));
-        d_equ[3] = w1 * local_density * (1.f + u[3] / c_sq
-                                         + (u[3] * u[3]) / (2.f * c_sq * c_sq)
-                                         - u_sq / (2.f * c_sq));
-        d_equ[4] = w1 * local_density * (1.f + u[4] / c_sq
-                                         + (u[4] * u[4]) / (2.f * c_sq * c_sq)
-                                         - u_sq / (2.f * c_sq));
-        /* diagonal speeds: weight w2 */
-        d_equ[5] = w2 * local_density * (1.f + u[5] / c_sq
-                                         + (u[5] * u[5]) / (2.f * c_sq * c_sq)
-                                         - u_sq / (2.f * c_sq));
-        d_equ[6] = w2 * local_density * (1.f + u[6] / c_sq
-                                         + (u[6] * u[6]) / (2.f * c_sq * c_sq)
-                                         - u_sq / (2.f * c_sq));
-        d_equ[7] = w2 * local_density * (1.f + u[7] / c_sq
-                                         + (u[7] * u[7]) / (2.f * c_sq * c_sq)
-                                         - u_sq / (2.f * c_sq));
-        d_equ[8] = w2 * local_density * (1.f + u[8] / c_sq
-                                         + (u[8] * u[8]) / (2.f * c_sq * c_sq)
-                                         - u_sq / (2.f * c_sq));
+        /* zero velocity density: weight w_0 */
+        d_equ[0] = w_0 * local_density
+                   * (1.f - op);
+        /* axis speeds: weight w_1 */
+        d_equ[1] = w_1 * local_density * (1.f + u[1] * (3.0f
+                                         + u[1] * 4.5f)
+                                         - op);
+        d_equ[2] = w_1 * local_density * (1.f + u[2] * (3.0f
+                                         + u[2] * 4.5f)
+                                         - op);
+        d_equ[3] = w_1 * local_density * (1.f + u[3] * (3.0f
+                                         + u[3] * 4.5f)
+                                         - op);
+        d_equ[4] = w_1 * local_density * (1.f + u[4] * (3.0f
+                                         + u[4] * 4.5f)
+                                         - op);
+        /* diagonal speeds: weight w_2 */
+        d_equ[5] = w_2 * local_density * (1.f + u[5] * (3.0f
+                                         + u[5] * 4.5f)
+                                         - op);
+        d_equ[6] = w_2 * local_density * (1.f + u[6] * (3.0f
+                                         + u[6] * 4.5f)
+                                         - op);
+        d_equ[7] = w_2 * local_density * (1.f + u[7] * (3.0f
+                                         + u[7] * 4.5f)
+                                         - op);
+        d_equ[8] = w_2 * local_density * (1.f + u[8] * (3.0f
+                                         + u[8] * 4.5f)
+                                         - op);
 
         /* relaxation step */
         for (int kk = 0; kk < NSPEEDS; kk++)
         {
           cells[ii + jj*params.nx].speeds[kk] = tmp_cells[ii + jj*params.nx].speeds[kk]
                                                 + params.omega
-                                                * (d_equ[kk] - tmp_cells[ii + jj*params.nx].speeds[kk]);
+                                                * ( d_equ[kk] - tmp_cells[ii + jj*params.nx].speeds[kk] );
         }
       }
     }
@@ -715,3 +718,4 @@ void usage(const char* exe)
   fprintf(stderr, "Usage: %s <paramfile> <obstaclefile>\n", exe);
   exit(EXIT_FAILURE);
 }
+
