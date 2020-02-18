@@ -248,7 +248,16 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
       tmp_cells[ii + jj*params.nx].speeds[6] = cells[x_e + y_s*params.nx].speeds[6]; /* north-west */
       tmp_cells[ii + jj*params.nx].speeds[7] = cells[x_e + y_n*params.nx].speeds[7]; /* south-west */
       tmp_cells[ii + jj*params.nx].speeds[8] = cells[x_w + y_n*params.nx].speeds[8]; /* south-east */
-
+      const float s0 = cells[ii + jj*params.nx].speeds[0]; /* central cell, no movement */
+      const float s1 = cells[x_w + jj*params.nx].speeds[1]; /* east */
+      const float s2 = cells[ii + y_s*params.nx].speeds[2]; /* north */
+      const float s3 = cells[x_e + jj*params.nx].speeds[3]; /* west */
+      const float s4 = cells[ii + y_n*params.nx].speeds[4]; /* south */
+      const float s5= cells[x_w + y_s*params.nx].speeds[5]; /* north-east */
+      const float s6 = cells[x_e + y_s*params.nx].speeds[6]; /* north-west */
+      const float s7 = cells[x_e + y_n*params.nx].speeds[7]; /* south-west */
+      const float s8 = cells[x_w + y_n*params.nx].speeds[8]; /* south-east */
+      
 
 /* ======================= REBOUND ======================= */
 
@@ -257,14 +266,14 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
       {
         /* called after propagate, so taking values from scratch space
         ** mirroring, and writing into main grid */
-        cells[ii + jj*params.nx].speeds[1] = tmp_cells[ii + jj*params.nx].speeds[3];
-        cells[ii + jj*params.nx].speeds[2] = tmp_cells[ii + jj*params.nx].speeds[4];
-        cells[ii + jj*params.nx].speeds[3] = tmp_cells[ii + jj*params.nx].speeds[1];
-        cells[ii + jj*params.nx].speeds[4] = tmp_cells[ii + jj*params.nx].speeds[2];
-        cells[ii + jj*params.nx].speeds[5] = tmp_cells[ii + jj*params.nx].speeds[7];
-        cells[ii + jj*params.nx].speeds[6] = tmp_cells[ii + jj*params.nx].speeds[8];
-        cells[ii + jj*params.nx].speeds[7] = tmp_cells[ii + jj*params.nx].speeds[5];
-        cells[ii + jj*params.nx].speeds[8] = tmp_cells[ii + jj*params.nx].speeds[6];
+        cells[ii + jj*params.nx].speeds[1] = s3;
+        cells[ii + jj*params.nx].speeds[2] = s4;
+        cells[ii + jj*params.nx].speeds[3] = s1;
+        cells[ii + jj*params.nx].speeds[4] = s2;
+        cells[ii + jj*params.nx].speeds[5] = s7;
+        cells[ii + jj*params.nx].speeds[6] = s8;
+        cells[ii + jj*params.nx].speeds[7] = s5;
+        cells[ii + jj*params.nx].speeds[8] = s6;
       }
     }
   }
@@ -309,7 +318,6 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
 
         /* velocity squared */
         float u_sq = u_x * u_x + u_y * u_y;
-        float op = u_sq * 1.5f;
 
 
         /* directional velocity components */
@@ -325,6 +333,8 @@ int timestep(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obst
 
         /* equilibrium densities */
         float d_equ[NSPEEDS];
+        
+        float op = u_sq * 1.5f;
         /* zero velocity density: weight w_0 */
         d_equ[0] = w_0*local_density*(1.f - op);
         /* axis speeds: weight w_1 */
@@ -701,4 +711,3 @@ void usage(const char* exe)
   fprintf(stderr, "Usage: %s <paramfile> <obstaclefile>\n", exe);
   exit(EXIT_FAILURE);
 }
-
