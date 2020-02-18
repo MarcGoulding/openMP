@@ -14,3 +14,5 @@ alias qcancel='scancel -u $USER'
 alias n='nano job_submit_d2q9-bgk'
 
 alias m='nano Makefile'
+
+alias c='clear'

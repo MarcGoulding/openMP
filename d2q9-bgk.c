@@ -286,7 +286,6 @@ int rebound(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obsta
 
 int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obstacles)
 {
-  const float c_sq = 1.f / 3.f; /* square of speed of sound */
   const float w0 = 4.f / 9.f;  /* weighting factor */
   const float w1 = 1.f / 9.f;  /* weighting factor */
   const float w2 = 1.f / 36.f; /* weighting factor */
@@ -328,7 +327,7 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
                      / local_density;
 
         /* velocity squared */
-        float u_sq = u_x * u_x + u_y * u_y;
+        // float u_sq = u_x * u_x + u_y * u_y;
 
         /* directional velocity components */
         float u[NSPEEDS];
@@ -342,10 +341,7 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
         u[8] =   u_x - u_y;  /* south-east */
 
         /* relaxation step */
-        /* equilibrium densities */
-        float d_equ[NSPEEDS];
-
-        float op = u_sq * 1.5f;
+        float op = (u_x * u_x + u_y * u_y) * 1.5f;
         /* zero velocity density: weight w0 */
         cells[ii+jj*params.nx].speeds[0] = tmp_cells[ii+jj*params.nx].speeds[0] + params.omega * (w0 * local_density * (1.f                             - op) - tmp_cells[ii+jj*params.nx].speeds[0]);
         /* axis speeds: weight w1 */
@@ -358,11 +354,9 @@ int collision(const t_param params, t_speed* cells, t_speed* tmp_cells, int* obs
         cells[ii+jj*params.nx].speeds[6] = tmp_cells[ii+jj*params.nx].speeds[6] + params.omega * (w2 * local_density * (1.f + u[6] * (3.0f + u[6]*4.5f) - op) - tmp_cells[ii+jj*params.nx].speeds[6]);
         cells[ii+jj*params.nx].speeds[7] = tmp_cells[ii+jj*params.nx].speeds[7] + params.omega * (w2 * local_density * (1.f + u[7] * (3.0f + u[7]*4.5f) - op) - tmp_cells[ii+jj*params.nx].speeds[7]);
         cells[ii+jj*params.nx].speeds[8] = tmp_cells[ii+jj*params.nx].speeds[8] + params.omega * (w2 * local_density * (1.f + u[8] * (3.0f + u[8]*4.5f) - op) - tmp_cells[ii+jj*params.nx].speeds[8]);
-        
       }
     }
   }
-
   return EXIT_SUCCESS;
 }
 
