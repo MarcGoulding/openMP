@@ -16,3 +16,5 @@ alias n='nano job_submit_d2q9-bgk'
 alias m='nano Makefile'
 
 alias c='clear'
+
+alias plot='gnuplot final_state.plt'
