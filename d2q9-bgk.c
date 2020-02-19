@@ -209,8 +209,8 @@ int timestep(const t_param params, t_speed* restrict cells, t_speed* restrict tm
   /* ==================== ACCELERATE FLOW ====================*/
   
   /* compute weighting factors */
-  float w_1 = params.density * params.accel / 9.f;
-  float w_2 = params.density * params.accel / 36.f;
+  const float w_1 = params.density * params.accel / 9.f;
+  const float w_2 = params.density * params.accel / 36.f;
 
   /* modify the 2nd row of the grid */
   int jj = params.ny - 2;
@@ -251,10 +251,10 @@ int timestep(const t_param params, t_speed* restrict cells, t_speed* restrict tm
     for (int ii = 0; ii < params.nx; ii++)
     {
 
-      int y_n = (jj + 1) % params.ny;
-      int x_e = (ii + 1) % params.nx;
-      int y_s = (jj == 0) ? (jj + params.ny - 1) : (jj - 1);
-      int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
+      const int y_n = (jj + 1) % params.ny;
+      const int x_e = (ii + 1) % params.nx;
+      const int y_s = (jj == 0) ? (jj + params.ny - 1) : (jj - 1);
+      const int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
 
       if (obstacles[jj*params.nx + ii])
       {
@@ -275,7 +275,7 @@ int timestep(const t_param params, t_speed* restrict cells, t_speed* restrict tm
       else
       {
         /* compute local density total */
-        float local_density = cells[ii  + jj *params.nx].speeds[0]
+        const float local_density = cells[ii  + jj *params.nx].speeds[0]
                             + cells[x_e + jj *params.nx].speeds[3]
                             + cells[ii  + y_n*params.nx].speeds[4]
                             + cells[x_w + jj *params.nx].speeds[1]
@@ -286,7 +286,7 @@ int timestep(const t_param params, t_speed* restrict cells, t_speed* restrict tm
                             + cells[x_e + y_s*params.nx].speeds[6];
 
         /* compute x velocity component */
-        float u_x = (cells[x_w + jj *params.nx].speeds[1]
+        const float u_x = (cells[x_w + jj *params.nx].speeds[1]
                       + cells[x_w + y_s*params.nx].speeds[5]
                       + cells[x_w + y_n*params.nx].speeds[8]
                       - (cells[x_e + jj *params.nx].speeds[3]
@@ -294,7 +294,7 @@ int timestep(const t_param params, t_speed* restrict cells, t_speed* restrict tm
                          + cells[x_e + y_n*params.nx].speeds[7]))
                      / local_density;
         /* compute y velocity component */
-        float u_y = (cells[ii  + y_s*params.nx].speeds[2]
+        const float u_y = (cells[ii  + y_s*params.nx].speeds[2]
                       + cells[x_w + y_s*params.nx].speeds[5]
                       + cells[x_e + y_s*params.nx].speeds[6]
                       - (cells[ii  + y_n*params.nx].speeds[4]
