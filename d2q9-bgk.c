@@ -96,9 +96,13 @@ typedef struct
 ** function prototypes
 */
 /* load params, allocate memory, load obstacles & initialise fluid particle densities */
-int initialise(const char* restrict paramfile, const char* restrict obstaclefile,
-               t_param* restrict params, t_speed** restrict cells_ptr, t_speed** restrict tmp_cells_ptr,
-               int** restrict obstacles_ptr, float** restrict av_vels_ptr);
+int initialise(const char* restrict paramfile,
+              const char* restrict obstaclefile,
+               t_param* restrict params,
+               t_speed** restrict cells_ptr,
+               t_speed** restrict tmp_cells_ptr,
+               int** restrict obstacles_ptr,
+               float** restrict av_vels_ptr);
 float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict tmp_cells, int* restrict obstacles);
 /* compute average velocity */
 float av_velocity(const t_param params, const t_speed* restrict cells, const int* restrict obstacles);
@@ -109,7 +113,7 @@ int finalise(const t_param* restrict params, t_speed** restrict cells_ptr, t_spe
 /* calculate Reynolds number */
 float calc_reynolds(const t_param params, t_speed* restrict cells, int* restrict obstacles);
 /* utility functions */
-void die(const char* restrict message, const int line, const char* file);
+void die(const char* restrict message, const int line, const char* restrict file);
 void usage(const char* restrict exe);
 
 /*
@@ -132,11 +136,7 @@ int main(int argc, char* restrict argv[])
   double systim;                /* floating point number to record elapsed system CPU time */
 
   /* parse the command line */
-  if (argc != 3)
-  {
-    usage(argv[0]);
-  }
-  else
+  if (argc != 3) usage(argv[0]); else
   {
     paramfile = argv[1];
     obstaclefile = argv[2];
@@ -170,8 +170,17 @@ int main(int argc, char* restrict argv[])
   #pragma omp parallel for
   for (int jj = 0; jj < params.ny; jj++)
   {
-    #pragma vector aligned
-    // #pragma omp simd
+    __assume_aligned(cells, 64);
+    __assume_aligned(cells->speed0, 64);
+    __assume_aligned(cells->speed1, 64);
+    __assume_aligned(cells->speed2, 64);
+    __assume_aligned(cells->speed3, 64);
+    __assume_aligned(cells->speed4, 64);
+    __assume_aligned(cells->speed5, 64);
+    __assume_aligned(cells->speed6, 64);
+    __assume_aligned(cells->speed7, 64);
+    __assume_aligned(cells->speed8, 64);
+    #pragma omp simd
     for (int ii = 0; ii < params.nx; ii++)
     {
       /* centre */
@@ -308,7 +317,6 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
   for (int jj = 0; jj < params.ny; jj++)
   {
     #pragma omp simd
-    #pragma vector aligned
     for (int ii = 0; ii < params.nx; ii++)
     {
 
