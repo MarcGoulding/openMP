@@ -102,6 +102,9 @@ int initialise(const char* restrict paramfile, const char* restrict obstaclefile
 */
 float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict tmp_cells, int* restrict obstacles);
 
+/* compute average velocity */
+float av_velocity(const t_param params, const t_speed* restrict cells, const int* restrict obstacles);
+
 int write_values(const t_param params, t_speed* restrict cells, int* restrict obstacles, float* restrict av_vels);
 
 /* finalise, including freeing up allocated memory */
@@ -168,9 +171,9 @@ int main(int argc, char* restrict argv[])
   tmp_cells->speed8 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
 
   /* initialise densities */
-  float w0 = params.density * 4.f / 9.f;
-  float w1 = params.density       / 9.f;
-  float w2 = params.density      / 36.f;
+  const float w0 = params.density * 4.f / 9.f;
+  const float w1 = params.density       / 9.f;
+  const float w2 = params.density      / 36.f;
 
   for (int jj = 0; jj < params.ny; jj++)
   {
@@ -227,6 +230,15 @@ int main(int argc, char* restrict argv[])
 
 float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict tmp_cells, int* restrict obstacles)
 {
+  /* ==================== ACCELERATE FLOW ====================*/
+  
+  /* compute weighting factors */
+  const float w_1 = params.density * params.accel / 9.f;
+  const float w_2 = params.density * params.accel / 36.f;
+
+  /* modify the 2nd row of the grid */
+  int jj = params.ny - 2;
+
   __assume_aligned(cells, 64);
   __assume_aligned(cells->speed0, 64);
   __assume_aligned(cells->speed1, 64);
@@ -248,15 +260,6 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
   __assume_aligned(tmp_cells->speed7, 64);
   __assume_aligned(tmp_cells->speed8, 64);
   __assume_aligned(obstacles, 64);
-  /* ==================== ACCELERATE FLOW ====================*/
-  
-  /* compute weighting factors */
-  const float w_1 = params.density * params.accel / 9.f;
-  const float w_2 = params.density * params.accel / 36.f;
-
-  /* modify the 2nd row of the grid */
-  int jj = params.ny - 2;
-
   #pragma omp simd
   for (int ii = 0; ii < params.nx; ii++)
   {
@@ -283,9 +286,30 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
   const float w1 = 1.f / 9.f;  /* weighting factor */
   const float w2 = 1.f / 36.f; /* weighting factor */
 
-  int    tot_cells = 0;  /* no. of cells used in calculation */
+  int   tot_cells = 0;        /* no. of cells used in calculation */
   float tot_u = 0.f;          /* accumulated magnitudes of velocity for each cell */
 
+  __assume_aligned(cells, 64);
+  __assume_aligned(cells->speed0, 64);
+  __assume_aligned(cells->speed1, 64);
+  __assume_aligned(cells->speed2, 64);
+  __assume_aligned(cells->speed3, 64);
+  __assume_aligned(cells->speed4, 64);
+  __assume_aligned(cells->speed5, 64);
+  __assume_aligned(cells->speed6, 64);
+  __assume_aligned(cells->speed7, 64);
+  __assume_aligned(cells->speed8, 64);
+  __assume_aligned(tmp_cells, 64);
+  __assume_aligned(tmp_cells->speed0, 64);
+  __assume_aligned(tmp_cells->speed1, 64);
+  __assume_aligned(tmp_cells->speed2, 64);
+  __assume_aligned(tmp_cells->speed3, 64);
+  __assume_aligned(tmp_cells->speed4, 64);
+  __assume_aligned(tmp_cells->speed5, 64);
+  __assume_aligned(tmp_cells->speed6, 64);
+  __assume_aligned(tmp_cells->speed7, 64);
+  __assume_aligned(tmp_cells->speed8, 64);
+  __assume_aligned(obstacles, 64);
   for (int jj = 0; jj < params.ny; jj++)
   {
     #pragma omp simd
@@ -297,7 +321,7 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
       const int y_s = (jj == 0) ? (jj + params.ny - 1) : (jj - 1);
       const int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
 
-      const float sp0 = cells->speed0[ii + jj * params.nx];
+      const float sp0 = cells->speed0[ii  + jj *params.nx];
       const float sp1 = cells->speed1[x_w + jj *params.nx];
       const float sp2 = cells->speed2[ii  + y_s*params.nx];
       const float sp3 = cells->speed3[x_e + jj *params.nx];
@@ -370,7 +394,7 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
         u[8] =   u_x - u_y;  /* south-east */
 
         /* relaxation step */
-        float op = (u_x * u_x + u_y * u_y) * 1.5f;
+        const float op = (u_x * u_x + u_y * u_y) * 1.5f;
         /* zero velocity density: weight w0 */
         tmp_cells->speed0[ii+jj*params.nx] = sp0 + params.omega * (w0 * local_density * (1.f                             - op) - sp0);
         /* axis speeds: weight w1 */
@@ -389,17 +413,26 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
   return tot_u / (float)tot_cells;
 }
 
-float av_velocity(const t_param params, t_speed* restrict cells, int* restrict obstacles)
+float av_velocity(const t_param params, const t_speed* restrict cells, const int* restrict obstacles)
 {
-  __assume_aligned(cells, 64);
-  __assume_aligned(obstacles, 64);
 
-  int    tot_cells = 0;  /* no. of cells used in calculation */
+  int   tot_cells = 0;  /* no. of cells used in calculation */
   float tot_u;          /* accumulated magnitudes of velocity for each cell */
 
   /* initialise */
   tot_u = 0.f;
 
+  __assume_aligned(cells, 64);
+  __assume_aligned(cells->speed0, 64);
+  __assume_aligned(cells->speed1, 64);
+  __assume_aligned(cells->speed2, 64);
+  __assume_aligned(cells->speed3, 64);
+  __assume_aligned(cells->speed4, 64);
+  __assume_aligned(cells->speed5, 64);
+  __assume_aligned(cells->speed6, 64);
+  __assume_aligned(cells->speed7, 64);
+  __assume_aligned(cells->speed8, 64);
+  __assume_aligned(obstacles, 64);
   /* loop over all non-blocked cells */
   for (int jj = 0; jj < params.ny; jj++)
   {
@@ -428,7 +461,7 @@ float av_velocity(const t_param params, t_speed* restrict cells, int* restrict o
                         + cells->speed6[ii + jj *params.nx]
                         + cells->speed7[ii + jj *params.nx]))
                         / local_density;
-        /* compute y velocity component */
+        /* y-component of velocity */
         const float u_y =(cells->speed2[ii + jj *params.nx]
                         + cells->speed5[ii + jj *params.nx]
                         + cells->speed6[ii + jj *params.nx]
@@ -436,6 +469,7 @@ float av_velocity(const t_param params, t_speed* restrict cells, int* restrict o
                         + cells->speed7[ii + jj *params.nx]
                         + cells->speed8[ii + jj *params.nx]))
                         / local_density;
+
         /* accumulate the norm of x- and y- velocity components */
         tot_u += sqrtf((u_x * u_x) + (u_y * u_y));
         /* increase counter of inspected cells */
