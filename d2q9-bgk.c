@@ -1,4 +1,10 @@
 /*
+**======================================================
+**
+** Coursework done by            Marc Goulding (mg17752)
+**
+**======================================================
+**
 ** Code to implement a d2q9-bgk lattice boltzmann scheme.
 ** 'd2' inidates a 2-dimensional grid, and
 ** 'q9' indicates 9 velocities per grid cell.
@@ -89,31 +95,19 @@ typedef struct
 /*
 ** function prototypes
 */
-
 /* load params, allocate memory, load obstacles & initialise fluid particle densities */
 int initialise(const char* restrict paramfile, const char* restrict obstaclefile,
                t_param* restrict params, t_speed** restrict cells_ptr, t_speed** restrict tmp_cells_ptr,
                int** restrict obstacles_ptr, float** restrict av_vels_ptr);
-
-/*
-** The main calculation methods.
-** timestep calls, in order, the functions:
-** accelerate_flow(), propagate(), rebound() & collision()
-*/
 float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict tmp_cells, int* restrict obstacles);
-
 /* compute average velocity */
 float av_velocity(const t_param params, const t_speed* restrict cells, const int* restrict obstacles);
-
 int write_values(const t_param params, t_speed* restrict cells, int* restrict obstacles, float* restrict av_vels);
-
 /* finalise, including freeing up allocated memory */
 int finalise(const t_param* restrict params, t_speed** restrict cells_ptr, t_speed** restrict tmp_cells_ptr,
              int** restrict obstacles_ptr, float** restrict av_vels_ptr);
-
 /* calculate Reynolds number */
 float calc_reynolds(const t_param params, t_speed* restrict cells, int* restrict obstacles);
-
 /* utility functions */
 void die(const char* restrict message, const int line, const char* file);
 void usage(const char* restrict exe);
@@ -159,7 +153,6 @@ int main(int argc, char* restrict argv[])
   cells->speed6 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
   cells->speed7 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
   cells->speed8 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
-
   tmp_cells->speed0 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
   tmp_cells->speed1 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
   tmp_cells->speed2 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
@@ -169,15 +162,16 @@ int main(int argc, char* restrict argv[])
   tmp_cells->speed6 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
   tmp_cells->speed7 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
   tmp_cells->speed8 = (float*)_mm_malloc(sizeof(float) * params.ny * params.nx, 64);
-
   /* initialise densities */
   const float w0 = params.density * 4.f / 9.f;
   const float w1 = params.density       / 9.f;
   const float w2 = params.density      / 36.f;
 
+  // #pragma omp parallel for
   for (int jj = 0; jj < params.ny; jj++)
   {
-    #pragma omp simd
+    #pragma vector aligned
+    // #pragma omp simd
     for (int ii = 0; ii < params.nx; ii++)
     {
       /* centre */
@@ -310,26 +304,28 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
   __assume_aligned(tmp_cells->speed7, 64);
   __assume_aligned(tmp_cells->speed8, 64);
   __assume_aligned(obstacles, 64);
+  // #pragma omp parallel for reduction(+:tot_cells,tot_u)
   for (int jj = 0; jj < params.ny; jj++)
   {
     #pragma omp simd
+    #pragma vector aligned
     for (int ii = 0; ii < params.nx; ii++)
     {
 
       const int y_n = (jj + 1) % params.ny;
       const int x_e = (ii + 1) % params.nx;
-      const int y_s = (jj == 0) ? (jj + params.ny - 1) : (jj - 1);
-      const int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
+      int y_s = (jj == 0) ? (jj + params.ny - 1) : (jj - 1);
+      int x_w = (ii == 0) ? (ii + params.nx - 1) : (ii - 1);
 
-      const float sp0 = cells->speed0[ii  + jj *params.nx];
-      const float sp1 = cells->speed1[x_w + jj *params.nx];
-      const float sp2 = cells->speed2[ii  + y_s*params.nx];
-      const float sp3 = cells->speed3[x_e + jj *params.nx];
-      const float sp4 = cells->speed4[ii  + y_n*params.nx];
-      const float sp5 = cells->speed5[x_w + y_s*params.nx];
-      const float sp6 = cells->speed6[x_e + y_s*params.nx];
-      const float sp7 = cells->speed7[x_e + y_n*params.nx];
-      const float sp8 = cells->speed8[x_w + y_n*params.nx];
+      float sp0 = cells->speed0[ii  + jj *params.nx];
+      float sp1 = cells->speed1[x_w + jj *params.nx];
+      float sp2 = cells->speed2[ii  + y_s*params.nx];
+      float sp3 = cells->speed3[x_e + jj *params.nx];
+      float sp4 = cells->speed4[ii  + y_n*params.nx];
+      float sp5 = cells->speed5[x_w + y_s*params.nx];
+      float sp6 = cells->speed6[x_e + y_s*params.nx];
+      float sp7 = cells->speed7[x_e + y_n*params.nx];
+      float sp8 = cells->speed8[x_w + y_n*params.nx];
 
       if (obstacles[jj*params.nx + ii])
       {
@@ -532,14 +528,6 @@ int initialise(const char* restrict paramfile, const char* restrict obstaclefile
   /* and close up the file */
   fclose(fp);
 
-  /*
-  ** Allocate memory.
-  **
-  ** Remember C is pass-by-value, so we need to
-  ** pass pointers into the initialise function.
-  */
-
-  /* main grid */
   *cells_ptr = (t_speed*)_mm_malloc(sizeof(t_speed),64);
 
   if (*cells_ptr == NULL) die("cannot allocate memory for cells", __LINE__, __FILE__);
@@ -555,6 +543,7 @@ int initialise(const char* restrict paramfile, const char* restrict obstaclefile
   if (*obstacles_ptr == NULL) die("cannot allocate column memory for obstacles", __LINE__, __FILE__);
 
   /* first set all cells in obstacle array to zero */
+  // #pragma omp parallel for
   for (int jj = 0; jj < params->ny; jj++)
   {
     #pragma omp simd
