@@ -167,7 +167,7 @@ int main(int argc, char* restrict argv[])
   const float w1 = params.density       / 9.f;
   const float w2 = params.density      / 36.f;
 
-  // #pragma omp parallel for
+  #pragma omp parallel for
   for (int jj = 0; jj < params.ny; jj++)
   {
     #pragma vector aligned
@@ -304,7 +304,7 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
   __assume_aligned(tmp_cells->speed7, 64);
   __assume_aligned(tmp_cells->speed8, 64);
   __assume_aligned(obstacles, 64);
-  // #pragma omp parallel for reduction(+:tot_cells,tot_u)
+  #pragma omp parallel for reduction(+:tot_cells,tot_u)
   for (int jj = 0; jj < params.ny; jj++)
   {
     #pragma omp simd
@@ -543,7 +543,7 @@ int initialise(const char* restrict paramfile, const char* restrict obstaclefile
   if (*obstacles_ptr == NULL) die("cannot allocate column memory for obstacles", __LINE__, __FILE__);
 
   /* first set all cells in obstacle array to zero */
-  // #pragma omp parallel for
+  #pragma omp parallel for
   for (int jj = 0; jj < params->ny; jj++)
   {
     #pragma omp simd
