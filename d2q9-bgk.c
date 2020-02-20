@@ -304,11 +304,12 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
   __assume_aligned(tmp_cells->speed8, 64);
   __assume_aligned(obstacles        , 64);
 
-  // #pragma omp parallel for reduction(+:tot_cells,tot_u)
-  // for (int jj = 0; jj < params.ny; jj++)
-  // {
+  const int step=512;
+  #pragma omp parallel for reduction(+:tot_cells,tot_u)
+ for (int k = 0; k < params.ny*params.nx; k+=step)
+ {
     #pragma omp simd
-    for (int ii = 0; ii < params.nx*params.ny; ii++)
+    for (int ii = k; ii < k+step; ii++)
     {
 
       const int y_n = (ii>(params.ny-1)*params.nx) ? -(params.ny-1)*params.nx : (params.nx);
@@ -387,7 +388,7 @@ float timestep(const t_param params, t_speed* restrict cells, t_speed* restrict 
       tmp_cells->speed7[ii] = (obstacles[ii]) ? sp[5] : sp[7] + params.omega * (w2 * local_density * (1.f + u[7] * (3.0f + u[7]*4.5f) - op) - sp[7]);
       tmp_cells->speed8[ii] = (obstacles[ii]) ? sp[6] : sp[8] + params.omega * (w2 * local_density * (1.f + u[8] * (3.0f + u[8]*4.5f) - op) - sp[8]);
     }
-  // }
+  }
   return tot_u / (float)tot_cells;
 }
 
