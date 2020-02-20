@@ -20,6 +20,7 @@ echo `echo $SLURM_JOB_NODELIST | uniq`
 
 
 OMP_NUM_THREADS=16
+OMP_PROC_BING=true
 
 ./d2q9-bgk input_128x128.params obstacles_128x128.dat
 
